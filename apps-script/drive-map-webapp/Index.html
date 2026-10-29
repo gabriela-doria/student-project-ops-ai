@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #f7f6f3; --panel: #ffffff; --ink: #1f2328; --muted: #6b6f76;
+    --line: #e3e1dc; --accent: #2f5d62; --accent-ink: #ffffff;
+    --folder: #8a6d3b; --doc: #2b6cb0; --sheet: #2f855a; --slides: #b7791f;
+    --pdf: #c53030; --image: #6b46c1; --video: #b83280; --form: #6b46c1; --other: #718096;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: var(--accent); color: var(--accent-ink); padding: 20px 16px; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: .01em; }
+  header p { margin: 4px 0 0; opacity: .85; font-size: 13px; }
+  header a { color: inherit; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+           border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  input[type=search] { font: inherit; flex: 1 1 220px; min-width: 0; padding: 6px 10px;
+                       border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+  ul.tree { list-style: none; margin: 0; padding-left: 18px; }
+  #tree > ul.tree { padding-left: 0; }
+  li { margin: 1px 0; }
+  .row { display: flex; align-items: center; gap: 6px; min-height: 30px; flex-wrap: nowrap; }
+  .arrow { width: 24px; height: 24px; padding: 0; border: 0; background: none; color: var(--muted);
+           transition: transform .12s; flex: none; }
+  .arrow[aria-expanded=true] { transform: rotate(90deg); }
+  .spacer { width: 24px; flex: none; }
+  .row a { color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row a:hover { text-decoration: underline; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; flex: none; }
+  .date { margin-left: auto; color: var(--muted); font-size: 12px; flex: none; padding-left: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 12px 0 0; }
+  .status { color: var(--muted); padding: 8px 0; }
+  .status.error { color: var(--pdf); }
+  .hit > .row a { background: #fff3bf; }
+  @media (max-width: 520px) { .date { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Drive Map</h1>
+  <p><a id="rootLink" href="#">root folder</a> · <span id="when"></span></p>
+</header>
+<main>
+  <div class="bar">
+    <button id="openAll" type="button">Expand all</button>
+    <button id="closeAll" type="button">Collapse all</button>
+    <button id="refresh" type="button">Refresh</button>
+    <input id="filter" type="search" placeholder="Find a file or folder" aria-label="Find a file or folder">
+  </div>
+  <div class="panel"><div id="tree"></div></div>
+  <ul class="legend" id="legend" aria-label="File types"></ul>
+</main>
+
+<script>
+  let DATA = <?!= bootJson ?>;
+
+  const TYPES = {
+    folder:  { label: 'folder',  color: 'var(--folder)' },
+    doc:     { label: 'doc',     color: 'var(--doc)' },
+    sheet:   { label: 'sheet',   color: 'var(--sheet)' },
+    slides:  { label: 'slides',  color: 'var(--slides)' },
+    pdf:     { label: 'pdf',     color: 'var(--pdf)' },
+    image:   { label: 'image',   color: 'var(--image)' },
+    video:   { label: 'video',   color: 'var(--video)' },
+    form:    { label: 'form',    color: 'var(--form)' },
+    other:   { label: 'other',   color: 'var(--other)' }
+  };
+  const OPEN = new Set();
+  let CHILDREN = {};
+  const dateFmt = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  const timeFmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+
+  function kind(mime) {
+    if (mime === 'application/vnd.google-apps.folder') return 'folder';
+    if (mime === 'application/vnd.google-apps.document') return 'doc';
+    if (mime === 'application/vnd.google-apps.spreadsheet') return 'sheet';
+    if (mime === 'application/vnd.google-apps.presentation') return 'slides';
+    if (mime === 'application/vnd.google-apps.form') return 'form';
+    if (mime === 'application/pdf') return 'pdf';
+    if (/^image\//.test(mime)) return 'image';
+    if (/^video\//.test(mime)) return 'video';
+    return 'other';
+  }
+
+  function url(it) {
+    return kind(it.t) === 'folder'
+      ? 'https://drive.google.com/drive/folders/' + encodeURIComponent(it.i)
+      : 'https://drive.google.com/open?id=' + encodeURIComponent(it.i);
+  }
+
+  function index() {
+    CHILDREN = {};
+    DATA.items.forEach(it => (CHILDREN[it.p] = CHILDREN[it.p] || []).push(it));
+    Object.values(CHILDREN).forEach(list => list.sort((a, b) => {
+      const fa = kind(a.t) === 'folder', fb = kind(b.t) === 'folder';
+      return fa === fb ? a.n.localeCompare(b.n, undefined, { numeric: true }) : (fa ? -1 : 1);
+    }));
+  }
+
+  function tag(k) {
+    const s = document.createElement('span');
+    s.className = 'tag';
+    s.textContent = TYPES[k].label;
+    s.style.color = TYPES[k].color;
+    return s;
+  }
+
+  function node(it) {
+    const li = document.createElement('li');
+    li.dataset.id = it.i;
+    const row = document.createElement('div');
+    row.className = 'row';
+    const hasKids = !!CHILDREN[it.i];
+    let arrow = null;
+    if (hasKids) {
+      arrow = document.createElement('button');
+      arrow.className = 'arrow';
+      arrow.type = 'button';
+      arrow.textContent = '▸';
+      row.appendChild(arrow);
+    } else {
+      const sp = document.createElement('span');
+      sp.className = 'spacer';
+      row.appendChild(sp);
+    }
+    const a = document.createElement('a');
+    a.href = url(it);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = it.n;           // textContent only: names are never parsed as HTML
+    row.appendChild(a);
+    row.appendChild(tag(kind(it.t)));
+    const d = document.createElement('span');
+    d.className = 'date';
+    d.textContent = it.m ? dateFmt.format(new Date(it.m)) : '';
+    row.appendChild(d);
+    li.appendChild(row);
+
+    if (arrow) {
+      const sub = document.createElement('ul');
+      sub.className = 'tree';
+      li.appendChild(sub);
+      let filled = false;
+      const set = open => {
+        arrow.setAttribute('aria-expanded', String(open));
+        arrow.setAttribute('aria-label', (open ? 'Collapse ' : 'Expand ') + it.n);
+        sub.hidden = !open;
+        if (open) { OPEN.add(it.i); if (!filled) { filled = true; fill(sub, it.i); } }
+        else OPEN.delete(it.i);
+      };
+      arrow._set = set;
+      arrow.addEventListener('click', () => set(arrow.getAttribute('aria-expanded') !== 'true'));
+      set(OPEN.has(it.i));
+    }
+    return li;
+  }
+
+  function fill(ul, parentId) {
+    (CHILDREN[parentId] || []).forEach(it => ul.appendChild(node(it)));
+  }
+
+  function status(text, isError) {
+    const p = document.createElement('p');
+    p.className = 'status' + (isError ? ' error' : '');
+    p.textContent = text;
+    return p;
+  }
+
+  function draw() {
+    const tree = document.getElementById('tree');
+    if (!DATA || DATA.error) {
+      tree.replaceChildren(status(DATA && DATA.error || 'No data.', true));
+      return;
+    }
+    index();
+    const link = document.getElementById('rootLink');
+    link.textContent = DATA.root.n;
+    link.href = 'https://drive.google.com/drive/folders/' + encodeURIComponent(DATA.root.i);
+    document.getElementById('when').textContent = 'updated at ' + timeFmt.format(new Date(DATA.builtAt));
+    const ul = document.createElement('ul');
+    ul.className = 'tree';
+    fill(ul, DATA.root.i);
+    tree.replaceChildren(ul);
+  }
+
+  function setAll(open) {
+    // Expanding fills children lazily, so repeat until no closed arrow is left.
+    let changed = true;
+    while (changed) {
+      changed = false;
+      document.querySelectorAll('.arrow').forEach(b => {
+        if ((b.getAttribute('aria-expanded') === 'true') !== open) { b._set(open); changed = true; }
+      });
+      if (!open) break;
+    }
+  }
+
+  function legend() {
+    const ul = document.getElementById('legend');
+    Object.keys(TYPES).forEach(k => { const li = document.createElement('li'); li.appendChild(tag(k)); ul.appendChild(li); });
+  }
+
+  function filter(term) {
+    term = term.trim().toLowerCase();
+    document.querySelectorAll('li.hit').forEach(li => li.classList.remove('hit'));
+    if (!term) return;
+    setAll(true);
+    document.querySelectorAll('#tree li').forEach(li => {
+      const a = li.querySelector(':scope > .row a');
+      if (a && a.textContent.toLowerCase().includes(term)) li.classList.add('hit');
+    });
+    const first = document.querySelector('li.hit');
+    if (first) first.scrollIntoView({ block: 'center' });
+  }
+
+  document.getElementById('openAll').addEventListener('click', () => setAll(true));
+  document.getElementById('closeAll').addEventListener('click', () => setAll(false));
+  document.getElementById('filter').addEventListener('input', e => filter(e.target.value));
+  document.getElementById('refresh').addEventListener('click', () => {
+    document.getElementById('when').textContent = 'refreshing…';
+    google.script.run
+      .withSuccessHandler(d => { DATA = d; draw(); })
+      .withFailureHandler(() => { document.getElementById('when').textContent = 'refresh failed'; })
+      .getTree(true);
+  });
+
+  legend();
+  draw();
+</script>
+</body>
+</html>

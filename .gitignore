@@ -1,0 +1,14 @@
+# Local config with real IDs never goes to the repo
+Config.gs
+*.local.*
+.clasp.json
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db

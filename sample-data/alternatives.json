@@ -1,0 +1,18 @@
+{
+  "_note": "Fictitious example. Criteria, weights and scores are illustrative.",
+  "criteria": [
+    {"id": "A1", "question": "Does nothing get lost if a member leaves?", "weight": 25, "veto": true},
+    {"id": "A2", "question": "Is confidential material reachable only by its owners?", "weight": 20, "veto": true},
+    {"id": "B1", "question": "Can a newcomer find 3 common files in under 5 minutes?", "weight": 20, "veto": false},
+    {"id": "B2", "question": "Is it obvious where to save a new file?", "weight": 15, "veto": false},
+    {"id": "C1", "question": "Can it be set up in one afternoon?", "weight": 10, "veto": false},
+    {"id": "C2", "question": "Can it be undone without data loss?", "weight": 10, "veto": false}
+  ],
+  "alternatives": {
+    "A · current structure":           {"A1": 2,  "A2": 1,  "B1": 0,  "B2": 0,  "C1": 2,  "C2": 2},
+    "B · three sibling folders":       {"A1": 2,  "A2": 2,  "B1": 1,  "B2": 1,  "C1": 1,  "C2": 1},
+    "C · restricted folder inside":    {"A1": 2,  "A2": 1,  "B1": 2,  "B2": 2,  "C1": 1,  "C2": 1},
+    "D · siblings plus shortcuts":     {"A1": 2,  "A2": 2,  "B1": 1,  "B2": 0,  "C1": 0,  "C2": 1},
+    "E · one flat folder per year":    {"A1": 1,  "A2": -1, "B1": 1,  "B2": 2,  "C1": 2,  "C2": 2}
+  }
+}

@@ -10,7 +10,7 @@ How I used an AI agent and Google Apps Script to restructure the operations of a
 
 ## Problem
 
-A university extension project with about 30 student members runs on a shared Google Drive and a group chat. Students rotate every year; only a few people stay. In practice:
+A university extension project with 25 students, 1 professor and 2 PhD students runs on a shared Google Drive and a group chat. Students rotate every year; only a few people stay. In practice:
 
 - Files were spread over several legacy folders owned by individual students. When a student leaves, their files can leave with them.
 - There was no naming rule, so the same document existed in several versions and newcomers could not find things.

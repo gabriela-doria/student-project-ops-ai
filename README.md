@@ -10,7 +10,7 @@ Como usei um agente de IA e Google Apps Script para reorganizar a operação de 
 
 ## Em 1 minuto
 
-- **O problema:** cerca de 30 estudantes dividiam um Drive sem regra de nome, de pasta ou de acesso, e os arquivos saíam junto com quem saía do projeto.
+- **O problema:** 25 alunos, 1 professor e 2 doutorandos dividiam um Drive sem regra de nome, de pasta ou de acesso, e os arquivos saíam junto com quem saía do projeto.
 - **O que eu fiz:** como integrante do projeto, liderei a reestruturação. Usei o Claude para ler, pesquisar, redigir e programar. Escolhi a nova estrutura com uma matriz de critérios com pesos e vetos, e migrei o Drive com scripts que simulam antes de executar.
 - **O resultado (contado nos registros dos scripts):** 559 itens inventariados, 124 renomeados, 62 pastas na nova estrutura e 33 contas com acesso por papel, numa única execução.
 - **Como rodar:** `python tools/decision_matrix.py sample-data/alternatives.json` mostra a matriz de decisão com dados fictícios.
@@ -18,7 +18,7 @@ Como usei um agente de IA e Google Apps Script para reorganizar a operação de 
 
 ## Problema
 
-Um projeto de extensão com cerca de 30 estudantes funciona num Google Drive compartilhado e num grupo de mensagens. Os estudantes mudam todo ano e poucas pessoas ficam. Na prática:
+Um projeto de extensão com 25 alunos, 1 professor e 2 doutorandos funciona num Google Drive compartilhado e num grupo de mensagens. Os estudantes mudam todo ano e poucas pessoas ficam. Na prática:
 
 - Os arquivos estavam espalhados em pastas antigas, de propriedade de cada estudante. Quando alguém sai, os arquivos podem sair junto.
 - Não havia regra de nome. O mesmo documento existia em várias versões e quem chegava não achava as coisas.
